@@ -1,0 +1,64 @@
+# .claudeignore
+
+# ── Build artifacts ────────────────────────────────────────────────────────
+build/
+
+# Compiled object files and dependency tracking
+*.o
+*.d
+*.a
+*.so
+
+# Kernel module build outputs
+*.ko
+*.mod
+*.mod.c
+*.mod.o
+*.order
+*.symvers
+modules.builtin
+modules.builtin.modinfo
+.tmp_versions/
+.cache.mk
+
+# CMake-generated files
+CMakeCache.txt
+cmake_install.cmake
+CMakeFiles/
+CPack*
+
+# ── Binary and large files ─────────────────────────────────────────────────
+# Claude should rely in claude.md and specific skills.
+*.csv
+*.pdf
+
+# ── Secrets and credentials ────────────────────────────────────────────────
+# CRITICAL: These must never enter the context window for security reasons.
+.env
+.env.*
+.env.local
+*.key
+*.pem
+*.ppk
+*.p12
+*.pfx
+secrets/
+credentials/
+
+
+# ── Editor and OS noise ────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.iml
+
+# ── Logs ───────────────────────────────────────────────────────────────────
+# Important: These must never enter the context window for security reasons.
+# Logs can accidentally contain PII, secrets, IPs etc. For debugging paste a
+# specific log.
+*.log
+/tmp/rocev2_claude_audit.log

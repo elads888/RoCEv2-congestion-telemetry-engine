@@ -1,0 +1,168 @@
+{
+  // ─────────────────────────────────────────────────────────────────────────
+  // PERMISSIONS
+  // ─────────────────────────────────────────────────────────────────────────
+  "permissions": {
+    "allow": [
+      // --- Kernel module build & lifecycle ---
+      // insmod/rmmod require root. We allow them explicitly because kernel
+      // module load/unload is a core workflow step in this project
+      "Bash(sudo insmod kernel_driver/mock_nic.ko)",
+      "Bash(sudo rmmod mock_nic)",
+      "Bash(sudo insmod *mock_nic*)",
+      "Bash(make -C /lib/modules/*/build M=* modules)",
+      "Bash(make -C kernel_driver clean)",
+      "Bash(make -C kernel_driver)",
+
+      // --- CMake / build ---
+      "Bash(cmake ..)",
+      "Bash(cmake -B build -S .)",
+      "Bash(cmake --build build*)",
+      "Bash(make -j*)",
+      "Bash(mkdir -p build)",
+
+      // --- Device file management ---
+      "Bash(ls -la /dev/mock_nic*)",
+      "Bash(stat /dev/mock_nic)",
+
+      // --- Kernel log inspection ---
+      "Bash(dmesg | tail -50)",
+      "Bash(dmesg | grep -i mock*)",
+      "Bash(sudo dmesg*)",
+
+      // --- Kernel module introspection ---
+      "Bash(lsmod | grep mock*)",
+      "Bash(modinfo kernel_driver/mock_nic.ko)",
+
+      // --- Process / resource inspection ---
+      "Bash(cat /proc/*/maps)",
+      "Bash(cat /proc/iomem)",
+      "Bash(cat /proc/meminfo)",
+
+      // --- Demo script ---
+      "Bash(sudo bash scripts/run_demo.sh)",
+      "Bash(bash scripts/run_demo.sh)",
+
+      // --- Standard file reads ---
+      "Read(**)",
+
+      // --- Writes scoped to project directory only ---
+      "Write(kernel_driver/**)",
+      "Write(userspace/**)",
+      "Write(demo/**)",
+      "Write(scripts/**)",
+      "Write(docs/**)",
+      "Write(build/**)",
+      "Write(CLAUDE.md)",
+      "Write(README.md)"
+    ],
+
+    "deny": [
+      // Never touch system kernel headers or modules outside the project scope.
+      "Write(/lib/modules/**)",
+      "Write(/etc/**)",
+      "Write(/usr/src/**)",
+
+      // Deny broad sudo permissions.
+      "Bash(sudo rm *)",
+      "Bash(sudo chmod *)",
+      "Bash(sudo chown *)",
+
+      // Never modify the kernel module Makefile without an explicit ask.
+      "Write(kernel_driver/Makefile)"
+    ]
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // HOOKS
+  // ─────────────────────────────────────────────────────────────────────────
+  "hooks": {
+
+    // ── PostToolUse ────────────────────────────────────────────────────────
+    "PostToolUse": [
+      {
+        // After any write to mock_nic.c, run clang-format immediately.
+        "matcher": "Write(kernel_driver/mock_nic.c)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "which clang-format && clang-format --style='{BasedOnStyle: kernel, IndentWidth: 8}' --dry-run --Werror kernel_driver/mock_nic.c && echo '[hook] mock_nic.c: style OK' || echo '[hook] WARNING: clang-format check failed or not installed'",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        // After any write to rocev2_header.h verify that the struct with check_doorbell_order.py script.
+        "matcher": "Write(userspace/rocev2_header.h)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/check_doorbell_order.py userspace/rocev2_header.h && echo '[hook] rocev2_header.h: doorbell field order OK'",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+
+    // ── PreToolUse ─────────────────────────────────────────────────────────
+    "PreToolUse": [
+      {
+        // Before any Bash command
+        "matcher": "Bash(*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/pre_bash_guard.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+
+    // ── Stop ───────────────────────────────────────────────────────────────
+    // Fires when Claude finishes a task.
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/post_session_check.sh",
+            "async": true,
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // ENVIRONMENT
+  // These vars are injected into every shell Claude spawns for project specific knowledge
+  // ─────────────────────────────────────────────────────────────────────────
+  "env": {
+
+    "KERNEL_VERSION": "$(uname -r)",
+
+    "MOCK_NIC_DEV": "/dev/mock_nic",
+
+    // Compiler flags that encode the project's quality
+    "USERSPACE_CXXFLAGS": "-std=c++17 -O2 -Wall -Wextra -Werror -fsanitize=thread",
+
+    // Explicit: this project targets Linux only. If Claude ever suggests
+    // a macOS or Windows path, something has gone wrong.
+    "PROJECT_TARGET_OS": "linux",
+    "PROJECT_TARGET_ARCH": "arm64"
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // INCLUDE ADDITIONAL CONTEXT FILES
+  // ─────────────────────────────────────────────────────────────────────────
+  "includeCoAuthoredBy": true,
+
+  // Skills loaded at session start
+  "skills": [
+    ".claude/skills/kernel_module_dev.md",
+    ".claude/skills/rocev2_domain.md",
+    ".claude/skills/cpp_lowlevel.md"
+  ]
+}
