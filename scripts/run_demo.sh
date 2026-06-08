@@ -52,6 +52,13 @@ DEMO_DIR="$PROJECT_ROOT"
 DEMO_BUILD="$DEMO_DIR/build"
 DEMO_BIN="$DEMO_BUILD/integrated_demo"
 
+# Optional feature toggle for slower simulator pacing.
+# Usage: ROCEV2_SLOW_MODE=1 sudo bash scripts/run_demo.sh
+SLOW_MODE_FLAG="-DROCEV2_SLOW_MODE=OFF"
+if [[ "${ROCEV2_SLOW_MODE:-0}" == "1" || "${ROCEV2_SLOW_MODE:-0}" == "ON" || "${ROCEV2_SLOW_MODE:-0}" == "on" || "${ROCEV2_SLOW_MODE:-0}" == "true" ]]; then
+    SLOW_MODE_FLAG="-DROCEV2_SLOW_MODE=ON"
+fi
+
 # ---------------------------------------------------------------------------
 # STEP 0: Pre-flight checks
 # ---------------------------------------------------------------------------
@@ -142,6 +149,7 @@ mkdir -p "$DEMO_BUILD"
 cd "$DEMO_BUILD"
 cmake "$DEMO_DIR" \
     -DCMAKE_BUILD_TYPE=Release \
+    "$SLOW_MODE_FLAG" \
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
     -Wno-dev \
     --no-warn-unused-cli \
@@ -249,7 +257,7 @@ echo -e "  ${BOLD}What to do:${NC}"
 echo    "  1. Open the URL above in your browser"
 echo    "  2. Drag the slider RIGHT past 5,000 pps → watch the buffer fill"
 echo    "  3. At 70% buffer fill → ECN activates, packets turn red"
-echo    "  4. Hold above 7,000 pps → congestion rate climbs, ALERT fires"
+echo    "  4. Hold above 6,000 pps → congestion rate climbs, ALERT fires"
 echo    "  5. Drag slider LEFT below 5,000 pps → buffer drains, packets green"
 echo    "  6. This is the DCQCN story: raise rate to congest, lower to recover"
 echo ""
