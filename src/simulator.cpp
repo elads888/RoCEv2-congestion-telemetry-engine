@@ -56,8 +56,7 @@ void SimulatorThread::run()
     auto *hdr = reinterpret_cast<RoCEv2_Header *>(mem_);
 
     uint32_t seq = 0;
-    bool was_ecn = false;       // tracks transitions from past ticks for log output
-    constexpr int TICK_MS = 10; // tick every 10ms makes the slider changes feel instant
+    bool was_ecn = false; // tracks transitions from past ticks for log output
 
     while (running_)
     {
@@ -75,8 +74,8 @@ void SimulatorThread::run()
         // pkts_this_tick > drain_this_tick  ->  buffer fills    ->  ECN triggers
         // pkts_this_tick = drain_this_tick  ->  buffer stable   ->  no ECN
         // ------------------------------------------------------------------
-        int pkts_this_tick = std::max(1, (int)(rate * TICK_MS / 1000));
-        int drain_this_tick = DRAIN_RATE_PPS * TICK_MS / 1000;
+        int pkts_this_tick = std::max(1, (int)(rate * SIM_TICK_MS / 1000));
+        int drain_this_tick = DRAIN_RATE_PPS * SIM_TICK_MS / 1000;
 
         // use of on stack variable to avoid usage of g_metrics because there can be concurrent telemetry thread and http server thread in the future
         bool ecn_now = false;
@@ -137,6 +136,6 @@ void SimulatorThread::run()
             hdr->sequence_number = ++seq;
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(TICK_MS));
+        std::this_thread::sleep_for(std::chrono::milliseconds(SIM_TICK_MS));
     }
 }

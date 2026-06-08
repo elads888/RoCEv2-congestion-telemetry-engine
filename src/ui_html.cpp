@@ -69,7 +69,7 @@ input[type=range].cr::-webkit-slider-thumb{background:#c02020}
 .cbf{height:100%;border-radius:3px;transition:width .35s ease,background .3s}
 .pkt-grid{display:flex;flex-wrap:wrap;gap:2px;min-height:36px;align-content:flex-start}
 .pk{width:11px;height:11px;border-radius:2px;flex-shrink:0}
-.pk.n{background:#083518}.pk.e{background:#420a0a}.pk.d{background:#181808;border:1px solid #706000;opacity:.5}
+.pk.n{background:#083518}.pk.e{background:#420a0a}
 .alert{background:#140606;border:1px solid #560a0a;border-radius:7px;padding:.7rem .875rem;display:flex;align-items:flex-start;gap:.55rem;transition:opacity .3s,transform .3s}
 .alert.hide{opacity:0;pointer-events:none;transform:translateY(-3px)}
 .adot{width:7px;height:7px;border-radius:50%;background:#d02020;margin-top:3px;flex-shrink:0}
@@ -125,7 +125,6 @@ input[type=range].cr::-webkit-slider-thumb{background:#c02020}
       <div style="flex:1;display:flex;flex-direction:column;gap:0;justify-content:flex-end">
         <div class="sr"><span class="sl">Buffer</span><span class="sv" id="bSlots">—</span></div>
         <div class="sr"><span class="sl">ECN marked</span><span class="sv r" id="ecnMk">—</span></div>
-        <div class="sr"><span class="sl">Dropped</span><span class="sv r" id="drpd">—</span></div>
         <div class="sr"><span class="sl">Cong. rate</span><span class="sv" id="cRt">—</span></div>
       </div>
     </div>
@@ -168,12 +167,12 @@ input[type=range].cr::-webkit-slider-thumb{background:#c02020}
     <div class="rtt">Transmission rate — drag to simulate congestion control</div>
     <div class="rv" id="rvDisp">—<span>pps</span></div>
   </div>
-  <input type="range" id="slider" min="200" max="12000" step="100" value="3000" class="ok">
-  <div class="rticks"><span>200</span><span>2k</span><span>4k</span><span>6k</span><span>8k</span><span>10k</span><span>12k</span></div>
+  <input type="range" id="slider" min="200" max="6000" step="100" value="3000" class="ok">
+  <div class="rticks"><span>200</span><span>2k</span><span>3k</span><span>4k</span><span>5k</span><span>6k</span></div>
   <div class="legend">
     <span class="leg"><span class="leg-dot" style="background:#083518"></span>Below 5,000 pps — buffer drains, no ECN</span>
-    <span class="leg"><span class="leg-dot" style="background:#4a2800"></span>5,000–7,000 pps — buffer fills, ECN at 70%</span>
-    <span class="leg"><span class="leg-dot" style="background:#420a0a"></span>Above 7,000 pps — heavy congestion + drops</span>
+    <span class="leg"><span class="leg-dot" style="background:#4a2800"></span>5,000–6,000 pps — buffer fills, ECN at 70%</span>
+    <span class="leg"><span class="leg-dot" style="background:#420a0a"></span>Above 6,000 pps — heavy congestion + drops</span>
   </div>
 </div>
 
@@ -213,7 +212,6 @@ function applyState(d) {
   document.getElementById('bPct').style.color = col;
   document.getElementById('bSlots').textContent = d.buffer_slots + '/' + d.buffer_capacity;
   document.getElementById('ecnMk').textContent = fmt(d.total_congested);
-  document.getElementById('drpd').textContent = fmt(d.total_dropped);
 
   const cr = d.congestion_rate;
   const crC = cr<5 ? '#00a048' : cr<20 ? '#c06800' : '#c82020';
@@ -242,11 +240,11 @@ function applyState(d) {
   document.getElementById('slider').value = d.sender_rate;
 
   const sv = d.sender_rate;
-  document.getElementById('slider').className = sv>7000 ? 'cr' : sv>5000 ? 'wa' : 'ok';
+  document.getElementById('slider').className = sv>6000 ? 'cr' : sv>5000 ? 'wa' : 'ok';
 
   if (d.recent_packets) {
     document.getElementById('pktGrid').innerHTML = d.recent_packets.map(p =>
-      `<div class="pk ${p.dropped?'d':p.ecn?'e':'n'}" title="seq ${p.seq}${p.ecn?' ECN':''}"></div>`
+      `<div class="pk ${p.ecn?'e':'n'}" title="seq ${p.seq}${p.ecn?' ECN':''}"></div>`
     ).join('');
 
     // Spawn animated packet dots across the flow lane
@@ -289,7 +287,7 @@ let debounce = null;
 sl.addEventListener('input', () => {
   const v = parseInt(sl.value);
   document.getElementById('rvDisp').innerHTML = v.toLocaleString() + '<span>pps</span>';
-  sl.className = v>7000 ? 'cr' : v>5000 ? 'wa' : 'ok';
+  sl.className = v>6000 ? 'cr' : v>5000 ? 'wa' : 'ok';
   clearTimeout(debounce);
   debounce = setTimeout(() => {
     fetch('/rate', {

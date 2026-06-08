@@ -24,6 +24,8 @@ project(rocev2_demo CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+option(ROCEV2_SLOW_MODE "Run simulator with a slower tick interval" OFF)
+
 # Release: maximum optimisation, keep frame pointers for profiling
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -fno-omit-frame-pointer")
 
@@ -42,6 +44,10 @@ add_executable(integrated_demo
 
 # All headers live in src/
 target_include_directories(integrated_demo PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+if(ROCEV2_SLOW_MODE)
+    target_compile_definitions(integrated_demo PRIVATE ROCEV2_SLOW_MODE=1)
+endif()
 
 find_package(Threads REQUIRED)
 target_link_libraries(integrated_demo PRIVATE Threads::Threads)

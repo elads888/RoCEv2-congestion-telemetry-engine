@@ -1,10 +1,11 @@
+#include <algorithm>
 #include <gtest/gtest.h>
 #include "simulator.h"
 #include "config.h"
 
 static constexpr int CAP   = 200;
 static constexpr int RED   = (CAP * 70) / 100;          // 140
-static constexpr int TICK  = 10;                         // ms
+static constexpr int TICK  = SIM_TICK_MS;                // ms
 static constexpr int DRAIN = DRAIN_RATE_PPS * TICK / 1000; // 50
 
 TEST(BufferModel, BelowDrainBufferDrains) {
@@ -17,11 +18,12 @@ TEST(BufferModel, BelowDrainBufferDrains) {
 }
 
 TEST(BufferModel, AboveDrainBufferFills) {
-    // max rate 12000 pps → 120 pkts/tick, net +70
+    // max rate is above drain, so queue gains (pkts - drain) this tick.
     int pkts = MAX_RATE_PPS * TICK / 1000;
+    int net = std::max(0, pkts - DRAIN);
     auto r = SimulatorThread::compute_buffer_tick(0, pkts, DRAIN, CAP, RED);
-    EXPECT_EQ(r.slots, 70);
-    EXPECT_FALSE(r.ecn);  // 70 < RED threshold 140
+    EXPECT_EQ(r.slots, net);
+    EXPECT_FALSE(r.ecn);
 }
 
 TEST(BufferModel, ECNTriggersExactlyAtRedThreshold) {
